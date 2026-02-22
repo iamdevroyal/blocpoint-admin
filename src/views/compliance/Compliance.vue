@@ -6,7 +6,6 @@ import {
   AlertTriangle, 
   Clock, 
   Search, 
-  Filter, 
   ChevronRight,
   ShieldCheck,
   Ban,
@@ -14,11 +13,8 @@ import {
   Activity,
   FileText,
   Settings,
-  MoreVertical,
   CheckCircle2,
   XCircle,
-  BarChart3,
-  ExternalLink
 } from 'lucide-vue-next'
 import BaseButton from '../../components/forms/BaseButton.vue'
 import Card from '../../components/misc/Card.vue'

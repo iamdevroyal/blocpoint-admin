@@ -10,7 +10,6 @@ import {
   RefreshCcw,
   CheckCircle2,
   ShieldCheck,
-  ChevronRight,
   ArrowUpRight,
   ArrowDownLeft,
   AlertTriangle,

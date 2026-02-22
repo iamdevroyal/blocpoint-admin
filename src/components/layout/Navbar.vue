@@ -20,7 +20,6 @@ import {
   MenuItems, 
   MenuItem,
   TransitionRoot,
-  TransitionChild,
   Popover,
   PopoverButton,
   PopoverPanel

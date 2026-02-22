@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed } from 'vue'
 import { 
   Scale, 
   UploadCloud, 
@@ -13,8 +13,6 @@ import {
   Zap,
   History,
   ShieldAlert,
-  ArrowUpRight,
-  ArrowDownLeft,
   ChevronRight,
   Activity,
   FileText,

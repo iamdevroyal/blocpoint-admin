@@ -17,8 +17,6 @@ import {
   History,
   AlertTriangle,
   Code,
-  Ban,
-  Fingerprint,
   Mail,
   CheckCircle2,
   XCircle,

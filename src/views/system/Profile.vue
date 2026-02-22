@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { 
   User, 
   Mail, 
@@ -9,11 +9,9 @@ import {
   Globe, 
   History,
   Camera,
-  LogOut,
   Save,
   CheckCircle2,
   Lock,
-  ChevronRight,
   Fingerprint,
   Eye,
   EyeOff,

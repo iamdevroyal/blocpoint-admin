@@ -9,16 +9,13 @@ import {
   TrendingUp, 
   AlertTriangle,
   Tag,
-  ChevronRight,
   TrendingDown,
   Activity,
   ShieldCheck,
   Package,
-  ArrowUpRight,
   User,
   Clock,
-  ExternalLink,
-  ChevronDown
+  ExternalLink
 } from 'lucide-vue-next'
 import BaseButton from '../../components/forms/BaseButton.vue'
 import Card from '../../components/misc/Card.vue'
@@ -35,7 +32,6 @@ const selectedBrand = ref<any>(null)
 const selectedSale = ref<any>(null)
 
 const isAddingBrand = ref(false)
-const isRestocking = ref(false)
 
 const notification = ref<{ show: boolean, message: string, type: 'success' | 'error' | 'info' }>({
   show: false,

@@ -1,17 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { 
-  User, 
-  Mail, 
-  ShieldCheck, 
-  Key, 
-  Smartphone, 
-  Globe, 
-  History,
-  Camera,
-  Save,
   CheckCircle2,
-  Fingerprint
 } from 'lucide-vue-next'
 import Card from '../../components/misc/Card.vue'
 import BaseButton from '../../components/forms/BaseButton.vue'

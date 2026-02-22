@@ -18,19 +18,10 @@ import {
   ZapOff,
   Edit2,
   Trash2,
-  Activity,
   Info,
   AlertTriangle
 } from 'lucide-vue-next'
-import { 
-  GlobeAltIcon,
-  BanknotesIcon,
-  ShieldCheckIcon,
-  PuzzlePieceIcon,
-  KeyIcon,
-  BoltIcon,
-  CommandLineIcon
-} from '@heroicons/vue/24/outline'
+
 import BaseButton from '../../components/forms/BaseButton.vue'
 import Card from '../../components/misc/Card.vue'
 import StatusBadge from '../../components/badges/StatusBadge.vue'

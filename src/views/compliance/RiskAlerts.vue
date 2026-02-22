@@ -11,11 +11,8 @@ import {
   UserX,
   Eye,
   Flag,
-  ChevronRight,
   Monitor,
-  Database,
   Lock,
-  ExternalLink,
   History,
   TrendingUp,
   AlertOctagon,
@@ -266,7 +263,7 @@ const getScoreColor = (score: number) => {
               <div class="text-xs font-bold text-white">{{ rule.name || rule.label }}</div>
               <div class="text-[9px] text-slate-500 uppercase font-mono mt-0.5 tracking-widest">{{ rule.value }}</div>
            </div>
-           <StatusBadge :status="rule.active ? 'active' : 'inactive'" size="xs" />
+           <StatusBadge :status="rule.active ? 'active' : 'suspended'" size="xs" />
         </div>
         <BaseButton variant="primary" class="w-full mt-4">
            <Zap class="w-4 h-4 mr-2" /> Deploy Revised Rules
