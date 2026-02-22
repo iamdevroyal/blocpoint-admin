@@ -4,6 +4,9 @@ import { useRoute } from 'vue-router'
 import Sidebar from '../components/layout/Sidebar.vue'
 import Navbar from '../components/layout/Navbar.vue'
 import { XMarkIcon } from '@heroicons/vue/24/outline'
+import { useUIStore } from '../stores/ui'
+
+const uiStore = useUIStore()
 
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(false)
@@ -49,8 +52,25 @@ function handleToggleSidebar() {
       :collapsed="sidebarCollapsed" 
     />
 
-    <div class="flex flex-1 flex-col overflow-hidden">
+    <div class="flex flex-1 flex-col overflow-hidden relative">
       <Navbar @toggle-sidebar="handleToggleSidebar" />
+      
+      <!-- Page Navigation Progress Bar -->
+      <transition
+        enter-active-class="transition-opacity duration-300"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-700"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div 
+          v-if="uiStore.isNavigating" 
+          class="absolute top-[64px] left-0 right-0 h-[2px] z-50 overflow-hidden bg-indigo-500/10"
+        >
+          <div class="progress-bar-inner h-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></div>
+        </div>
+      </transition>
       
       <main class="flex-1 overflow-y-auto w-full px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300">
         <slot />
@@ -58,3 +78,23 @@ function handleToggleSidebar() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.progress-bar-inner {
+  width: 100%;
+  animation: progress-load 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: left;
+}
+
+@keyframes progress-load {
+  0% {
+    transform: scaleX(0) translateX(0);
+  }
+  50% {
+    transform: scaleX(0.7) translateX(20%);
+  }
+  100% {
+    transform: scaleX(0) translateX(100%);
+  }
+}
+</style>

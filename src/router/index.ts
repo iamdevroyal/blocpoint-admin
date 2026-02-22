@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,6 +33,9 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, _from, next) => {
+    const uiStore = useUIStore()
+    uiStore.startNavigation()
+
     const authStore = useAuthStore()
     const requiresAuth = to.meta.requiresAuth !== false
 
@@ -42,6 +46,11 @@ router.beforeEach(async (to, _from, next) => {
     } else {
         next()
     }
+})
+
+router.afterEach(() => {
+    const uiStore = useUIStore()
+    uiStore.endNavigation()
 })
 
 export default router
