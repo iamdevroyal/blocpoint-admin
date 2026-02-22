@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dark-bg: #0b0f1a;
+  /* Deeper slate for depth */
+  --color-dark-surface: #131c2d;
+  /* Improved surface contrast */
+  --color-glass: rgba(19, 28, 45, 0.6);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --animate-pulse-slow: pulse-slow 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-slow {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-slate-100 antialiased overflow-x-hidden;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-glass backdrop-blur-xl border border-glass-border shadow-2xl;
+  }
+
+  .glow-orb {
+    @apply absolute rounded-full blur-[120px] opacity-30 animate-pulse-slow;
+  }
+
+  .form-input-premium {
+    @apply bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all text-sm;
+  }
+}
