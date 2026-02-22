@@ -180,12 +180,12 @@ const getSeverityStyles = (severity: string) => {
     <!-- Main Log View -->
     <div class="space-y-4">
       <!-- Logic Bar -->
-      <div class="flex items-center justify-between">
-        <div class="relative w-full max-w-md">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="relative w-full sm:max-w-md">
            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
            <input v-model="search" type="text" placeholder="Search by actor, action or target..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" />
         </div>
-        <div class="flex items-center gap-1 bg-white/5 p-1 rounded-xl overflow-x-auto scrollbar-hide shrink-0">
+        <div class="flex items-center gap-1 bg-white/5 p-1 rounded-xl overflow-x-auto scrollbar-hide max-w-full">
           <button 
             v-for="f in ['all', 'critical', 'high', 'medium', 'low']" :key="f"
             @click="activeFilter = f"
