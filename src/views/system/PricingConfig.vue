@@ -123,7 +123,7 @@ function openCommDrawer(comm: any) {
     </div>
 
     <!-- Navigation Tabs -->
-    <div class="flex items-center gap-1 bg-white/5 p-1 rounded-2xl w-fit">
+    <div class="flex items-center gap-1 bg-white/5 p-1 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-hide">
       <button 
         v-for="t in [
           { id: 'fees', label: 'Transaction Fees', icon: Tag },
@@ -154,7 +154,7 @@ function openCommDrawer(comm: any) {
         </BaseButton>
       </div>
 
-      <Card padding="p-0">
+      <Card padding="p-0" class="overflow-x-auto">
         <table class="w-full text-left text-sm">
           <thead class="bg-white/[0.01] border-b border-white/5">
             <tr class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">

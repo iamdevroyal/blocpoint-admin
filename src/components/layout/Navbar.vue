@@ -175,7 +175,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
             leave-from-class="opacity-100 translate-y-0"
             leave-to-class="opacity-0 translate-y-1"
           >
-            <PopoverPanel class="absolute -right-12 sm:right-0 z-50 mt-4 w-80 origin-top-right">
+            <PopoverPanel class="fixed inset-x-4 top-16 z-50 mt-2 sm:absolute sm:top-auto sm:right-0 sm:mt-4 sm:w-80 origin-top">
               <div class="glass-panel overflow-hidden rounded-3xl border border-white/10 bg-dark-bg/95 shadow-2xl backdrop-blur-xl">
                 <div class="p-4 border-b border-white/5 flex items-center justify-between">
                   <h3 class="text-xs font-bold text-white uppercase tracking-widest">Notification Engine</h3>
@@ -239,7 +239,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
             leave-from-class="opacity-100 scale-100"
             leave-to-class="opacity-0 scale-95"
           >
-            <MenuItems class="absolute -right-2 sm:right-0 z-50 mt-4 w-56 origin-top-right">
+            <MenuItems class="fixed inset-x-4 top-16 z-50 mt-2 sm:absolute sm:top-auto sm:right-0 sm:mt-4 sm:w-56 origin-top">
               <div class="glass-panel overflow-hidden rounded-2xl border border-white/10 bg-dark-bg/95 shadow-2xl backdrop-blur-xl p-1.5">
                 <div class="px-3 py-3 border-b border-white/5">
                   <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Connected User</p>

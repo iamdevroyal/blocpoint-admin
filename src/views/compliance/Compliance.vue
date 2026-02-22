@@ -163,7 +163,7 @@ const getRiskColor = (risk: string) => {
 <template>
   <div class="p-4 sm:p-8 max-w-[1400px] mx-auto space-y-8">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h1 class="text-3xl font-bold text-white tracking-tight">Compliance & Risk</h1>
         <p class="text-slate-400 mt-1">Monitor KYC/KYB pipelines and automate AML detection workflows.</p>
@@ -201,8 +201,8 @@ const getRiskColor = (risk: string) => {
       
       <!-- Verification Queue (Left 2/3) -->
       <div class="lg:col-span-2 space-y-6">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-1 p-1 bg-white/5 rounded-xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-1 p-1 bg-white/5 rounded-xl overflow-x-auto scrollbar-hide">
             <button 
               v-for="q in ['KYC Queue', 'AML Alerts', 'Suspension Desk']" :key="q"
               :class="[

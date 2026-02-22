@@ -182,18 +182,18 @@ const formatCurrency = (val: number) => {
       
       <!-- Exceptions List (Left 2/3) -->
       <div class="xl:col-span-2 space-y-6">
-        <div class="flex items-center justify-between bg-white/[0.01] border border-white/5 p-2 rounded-2xl">
-          <div class="flex items-center gap-1">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between bg-white/[0.01] border border-white/5 p-2 rounded-2xl gap-4">
+          <div class="flex items-center gap-1 overflow-x-auto scrollbar-hide py-1">
             <button 
               v-for="t in ['Active Queue', 'All Events', 'Resolved']" :key="t"
               @click="activeTab = t.toLowerCase().replace(' ', '_')"
-              :class="['px-4 py-2 text-xs font-bold rounded-xl transition-all', activeTab === t.toLowerCase().replace(' ', '_') ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300']"
+              :class="['px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap', activeTab === t.toLowerCase().replace(' ', '_') ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300']"
             >
               {{ t }}
             </button>
           </div>
-          <div class="flex gap-2 p-2">
-            <div class="relative w-48 sm:w-64">
+          <div class="flex gap-2 px-1 pb-1 lg:p-0">
+            <div class="relative flex-1 lg:max-w-xs">
               <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input 
                 v-model="search"
@@ -202,7 +202,7 @@ const formatCurrency = (val: number) => {
                 class="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 pl-8 pr-3 text-[10px] text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50" 
               />
             </div>
-            <BaseButton variant="secondary" size="sm" class="px-2">
+            <BaseButton variant="secondary" size="sm" class="px-2 shrink-0">
               <Filter class="w-3.5 h-3.5" />
             </BaseButton>
           </div>
