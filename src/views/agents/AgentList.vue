@@ -76,12 +76,12 @@ const exportCSV = () => {
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-bold text-white tracking-tight">Agent Network</h1>
-        <p class="text-slate-400 mt-1">Manage, approve, and monitor active agents in the ecosystem.</p>
+        <h1 class="text-3xl font-bold text-white tracking-tight">User/Agent Dashboard</h1>
+        <p class="text-slate-400 mt-1">Manage, approve, and monitor active users/agents in the ecosystem.</p>
       </div>
       <BaseButton variant="primary" class="group" @click="showOnboarding = true">
         <Plus class="w-4 h-4 mr-2" />
-        Onboard New Agent
+        Onboard New User/Agent
       </BaseButton>
     </div>
 
@@ -95,10 +95,10 @@ const exportCSV = () => {
     <!-- Stats Bar -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div v-for="(stat, i) in [
-        { label: 'Total Agents', value: '1,204', icon: UserCheck, color: 'text-indigo-400' },
+        { label: 'Total Users/Agents', value: '1,204', icon: UserCheck, color: 'text-indigo-400' },
         { label: 'Active Tiers', value: '3', icon: Building2, color: 'text-emerald-400' },
-        { label: 'Network Float', value: '₦ 48.2M', icon: Wallet2, color: 'text-cyan-400' },
-        { label: 'Pending KYC', value: '14', icon: SlidersHorizontal, color: 'text-amber-400' }
+        { label: 'Total Users Liquidity', value: '₦ 48,276,897.80', icon: Wallet2, color: 'text-cyan-400' },
+        { label: 'Users Pending KYC', value: '14', icon: SlidersHorizontal, color: 'text-amber-400' }
       ]" :key="i" class="glass-panel p-5 rounded-2xl flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center">
           <component :is="stat.icon" :class="['w-6 h-6', stat.color]" />
@@ -160,7 +160,7 @@ const exportCSV = () => {
         <table class="w-full text-left text-sm whitespace-nowrap">
           <thead>
             <tr class="text-slate-500 font-semibold border-b border-white/5 bg-white/[0.02]">
-              <th class="px-6 py-4">Agent Identification</th>
+              <th class="px-6 py-4">User/Agent Identification</th>
               <th class="px-6 py-4">Status & Compliance</th>
               <th class="px-6 py-4">Float Balance</th>
               <th class="px-6 py-4">MTD Volume</th>

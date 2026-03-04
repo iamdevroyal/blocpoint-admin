@@ -69,8 +69,8 @@ const recentActivity = [
     <!-- Top Bar -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-bold text-white tracking-tight">Ecosystem Overview</h1>
-        <p class="text-slate-400 mt-1">Real-time snapshots of the BlocPoint financial network.</p>
+        <h1 class="text-3xl font-bold text-white tracking-tight">Dashboard Overview</h1>
+        <p class="text-slate-400 mt-1">Real-time snapshots of the Blocpoint Operational system.</p>
       </div>
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
@@ -87,10 +87,36 @@ const recentActivity = [
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <Card v-for="stat in [
-        { label: 'Network Float', value: '₦ 148.2M', trend: '+12.5%', isUp: true, icon: Wallet, color: 'from-indigo-500/20 to-indigo-500/0' },
+        { label: 'Total Liquidity Float', value: '₦ 148.2M', trend: '+12.5%', isUp: true, icon: Wallet, color: 'from-indigo-500/20 to-indigo-500/0' },
         { label: 'Active Agents', value: '1,204', trend: '+3.2%', isUp: true, icon: Users, color: 'from-cyan-500/20 to-cyan-500/0' },
         { label: 'Daily TXN Volume', value: '₦ 4.2M', trend: '-2.1%', isUp: false, icon: Zap, color: 'from-purple-500/20 to-purple-500/0' },
-        { label: 'Risk Score', value: '7.4/10', trend: 'Low Risk', isUp: true, icon: ShieldAlert, color: 'from-rose-500/20 to-rose-500/0' }
+        { label: 'Fraud Cases', value: '20', trend: 'Low Risk', isUp: true, icon: ShieldAlert, color: 'from-rose-500/20 to-rose-500/0' }
+      ]" :key="stat.label" class="relative group overflow-hidden border-white/5 pb-2">
+        <div :class="['absolute inset-0 bg-gradient-to-br opacity-50 transition-opacity group-hover:opacity-80', stat.color]"></div>
+        <div class="relative z-10 flex flex-col gap-4">
+          <div class="flex justify-between items-start">
+            <div class="p-2.5 bg-white/5 rounded-xl border border-white/10">
+              <component :is="stat.icon" class="w-5 h-5 text-white" />
+            </div>
+            <div :class="['px-2 py-0.5 rounded text-[10px] font-bold font-mono', stat.isUp ? 'text-emerald-400 bg-emerald-400/5' : 'text-rose-400 bg-rose-400/5']">
+              {{ stat.trend }}
+            </div>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">{{ stat.label }}</p>
+            <p class="text-2xl font-bold text-white mt-0.5 tracking-tight">{{ stat.value }}</p>
+          </div>
+        </div>
+      </Card>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <Card v-for="stat in [
+        { label: 'Stablecoin Liquidity', value: '₦ 8,568,988.20', trend: '+12.5%', isUp: true, icon: Wallet, color: 'from-indigo-500/20 to-indigo-500/0' },
+        { label: 'Micro-Loan Volume', value: '1,204', trend: '+3.2%', isUp: true, icon: Users, color: 'from-cyan-500/20 to-cyan-500/0' },
+        { label: 'Giftcard Liquidity', value: '₦ 4,656,897.90', trend: '-2.1%', isUp: false, icon: Zap, color: 'from-purple-500/20 to-purple-500/0' },
+        { label: 'Compliance Cases', value: '23', trend: 'Low Risk', isUp: true, icon: ShieldAlert, color: 'from-rose-500/20 to-rose-500/0' }
       ]" :key="stat.label" class="relative group overflow-hidden border-white/5 pb-2">
         <div :class="['absolute inset-0 bg-gradient-to-br opacity-50 transition-opacity group-hover:opacity-80', stat.color]"></div>
         <div class="relative z-10 flex flex-col gap-4">

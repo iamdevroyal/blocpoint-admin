@@ -6,6 +6,7 @@ const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         { path: '/login', name: 'login', component: () => import('../views/auth/Login.vue'), meta: { requiresAuth: false } },
+        { path: '/two-factor', name: 'two-factor', component: () => import('../views/auth/TwoFactor.vue'), meta: { requiresAuth: false } },
         { path: '/', name: 'home', redirect: '/dashboard' },
         { path: '/dashboard', name: 'dashboard', component: () => import('../views/Dashboard.vue'), meta: { requiresAuth: true } },
 

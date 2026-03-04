@@ -5,8 +5,11 @@ import { useAuthStore } from '../../stores/auth'
 import { Mail, Lock, ChevronRight, ShieldCheck, Globe, Zap } from 'lucide-vue-next'
 import BaseButton from '../../components/forms/BaseButton.vue'
 
+import { useToast } from 'vue-toastification'
+
 const router = useRouter()
 const authStore = useAuthStore()
+const toast = useToast()
 
 const email = ref('')
 const password = ref('')
@@ -15,10 +18,18 @@ const errorMsg = ref('')
 async function handleLogin() {
   errorMsg.value = ''
   try {
-    await authStore.login({ email: email.value, password: password.value })
-    router.push('/dashboard')
+    const result = await authStore.login({ email: email.value, password: password.value })
+    if (result.twoFactorRequired) {
+      toast.info('Verification Required (2FA)')
+      router.push('/two-factor')
+    } else {
+      toast.success('Successfully logged in!')
+      router.push('/dashboard')
+    }
   } catch (error: any) {
-    errorMsg.value = error.response?.data?.message || 'Invalid credentials. Please verify your access.'
+    const responseData = error.response?.data
+    toast.error(responseData?.message || responseData?.error || error.message || 'Invalid credentials. Please verify your access.')
+    errorMsg.value = responseData?.message || responseData?.error || error.message || 'Invalid credentials. Please verify your access.'
   }
 }
 

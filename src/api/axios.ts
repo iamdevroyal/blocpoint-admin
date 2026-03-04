@@ -2,11 +2,13 @@ import axios from 'axios'
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 
 const apiClient: AxiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1/admin',
+    // Point to Laravel's public root; all paths should be absolute from there.
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost/blocpoint/blocpoint-api/public',
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    }
+        'Accept': 'application/json',
+    },
 })
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
@@ -21,6 +23,16 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     // Add Idempotency Key for mutating requests
     if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
         config.headers['Idempotency-Key'] = crypto.randomUUID()
+
+        // Explicitly send X-XSRF-TOKEN header if cookie is present (helps with cross-port CSRF)
+        const xsrfToken = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('XSRF-TOKEN='))
+            ?.split('=')[1]
+
+        if (xsrfToken) {
+            config.headers['X-XSRF-Token'] = decodeURIComponent(xsrfToken)
+        }
     }
 
     return config

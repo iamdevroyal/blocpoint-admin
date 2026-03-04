@@ -26,10 +26,13 @@ import {
 } from '@headlessui/vue'
 import { useAuthStore } from '../../stores/auth'
 
+import { useToast } from 'vue-toastification'
+
 defineEmits(['toggle-sidebar'])
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toast = useToast()
 
 // Search Logic
 const searchQuery = ref('')
@@ -68,8 +71,9 @@ const notifications = ref([
 const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
 
 // Profile Logic
-const logout = () => {
-  authStore.logout()
+const logout = async () => {
+  await authStore.logout()
+  toast.success('Signed out successfully')
   router.push('/login')
 }
 
@@ -111,7 +115,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
           v-model="searchQuery"
           @focus="isSearchFocused = true"
           @blur="onBlur"
-          class="block h-full w-full border-0 py-0 pl-10 pr-0 bg-transparent text-white placeholder:text-slate-500 focus:outline-none focus:ring-0 sm:text-sm" 
+          class="block h-full w-full  py-0 pl-10 pr-0 bg-1 text-white placeholder:text-slate-500 focus:outline-none focus:ring-0 sm:text-sm" 
           placeholder="Search everything... (Press '/')" 
           type="search" 
         />
