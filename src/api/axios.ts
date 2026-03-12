@@ -13,9 +13,10 @@ const apiClient: AxiosInstance = axios.create({
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('admin_token')
-    if (token) {
+    if (token && token !== 'session') {
         config.headers.Authorization = `Bearer ${token}`
     }
+
 
     // Add Correlation ID
     config.headers['X-Correlation-Id'] = crypto.randomUUID()

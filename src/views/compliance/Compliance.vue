@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { 
   ShieldAlert, 
   UserCheck, 
@@ -23,7 +24,9 @@ import BaseModal from '../../components/modals/BaseModal.vue'
 import BaseDrawer from '../../components/modals/BaseDrawer.vue'
 
 // State Management
+const router = useRouter()
 const activeQueue = ref('kyc_queue')
+
 const search = ref('')
 const showDetailDrawer = ref(false)
 const showSettingsModal = ref(false)
@@ -169,6 +172,10 @@ const getRiskColor = (risk: string) => {
         <p class="text-slate-400 mt-1">Monitor KYC/KYB pipelines and automate AML detection workflows.</p>
       </div>
       <div class="flex gap-3">
+        <BaseButton variant="ghost" size="sm" @click="router.push('/compliance/tax')" class="text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/5">
+          <FileText class="w-4 h-4 mr-2" />
+          Tax Intelligence
+        </BaseButton>
         <BaseButton variant="secondary" size="sm" @click="handleExport" :loading="isExporting">
           <Download class="w-4 h-4 mr-2" />
           Export Audit Log
@@ -179,6 +186,7 @@ const getRiskColor = (risk: string) => {
         </BaseButton>
       </div>
     </div>
+
 
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

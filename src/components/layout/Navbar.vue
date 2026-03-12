@@ -25,6 +25,7 @@ import {
   PopoverPanel
 } from '@headlessui/vue'
 import { useAuthStore } from '../../stores/auth'
+import { useNotificationStore } from '../../stores/notifications'
 
 import { useToast } from 'vue-toastification'
 
@@ -32,6 +33,7 @@ defineEmits(['toggle-sidebar'])
 
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 const toast = useToast()
 
 // Search Logic
@@ -60,15 +62,8 @@ const filteredResults = computed(() => {
   )
 })
 
-// Notification Logic
-const notifications = ref([
-  { id: 1, type: 'critical', title: 'AML Alert: High Volume', time: '2 mins ago', read: false },
-  { id: 2, type: 'info', title: 'New Agent Registered', time: '15 mins ago', read: false },
-  { id: 3, type: 'success', title: 'Settlement Completed', time: '1h ago', read: true },
-  { id: 4, type: 'warning', title: 'Low Liquidity Notice', time: '3h ago', read: true }
-])
-
-const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
+const unreadCount = computed(() => notificationStore.unreadCount)
+const displayNotifications = computed(() => notificationStore.recentNotifications)
 
 // Profile Logic
 const logout = async () => {
@@ -179,18 +174,18 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
             leave-from-class="opacity-100 translate-y-0"
             leave-to-class="opacity-0 translate-y-1"
           >
-            <PopoverPanel class="fixed inset-x-4 top-16 z-50 mt-2 sm:absolute sm:top-auto sm:right-0 sm:mt-4 sm:w-80 origin-top">
+            <PopoverPanel v-slot="{ close }" class="fixed inset-x-4 top-16 z-50 mt-2 sm:absolute sm:top-auto sm:right-0 sm:mt-4 sm:w-80 origin-top">
               <div class="glass-panel overflow-hidden rounded-3xl border border-white/10 bg-dark-bg/95 shadow-2xl backdrop-blur-xl">
                 <div class="p-4 border-b border-white/5 flex items-center justify-between">
                   <h3 class="text-xs font-bold text-white uppercase tracking-widest">Notification Engine</h3>
-                  <button @click="notifications.forEach(n => n.read = true)" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold">Mark all read</button>
+                  <button @click="notificationStore.markAllRead(); close()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold">Mark all read</button>
                 </div>
                 <div class="max-h-96 overflow-y-auto py-2 custom-scrollbar">
-                  <router-link 
-                    v-for="n in notifications" 
+                  <div 
+                    v-for="n in displayNotifications.slice(0, 5)" 
                     :key="n.id" 
-                    to="/notifications"
-                    class="px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer group flex gap-3 relative block"
+                    @click="router.push('/notifications/' + n.id); close()"
+                    class="px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer group flex gap-3 relative"
                   >
                     <div v-if="!n.read" class="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-full"></div>
                     <div :class="[
@@ -207,12 +202,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown))
                       <p class="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">{{ n.title }}</p>
                       <p class="text-[10px] text-slate-500 mt-1">{{ n.time }}</p>
                     </div>
-                  </router-link>
+                  </div>
                 </div>
                 <div class="p-3 border-t border-white/5 text-center">
-                  <router-link to="/notifications">
+                  <button @click="router.push('/notifications'); close()" class="w-full">
                     <BaseButton variant="ghost" size="sm" class="w-full text-[10px] font-bold uppercase tracking-widest">View System Logs</BaseButton>
-                  </router-link>
+                  </button>
                 </div>
               </div>
             </PopoverPanel>

@@ -16,6 +16,8 @@ const router = createRouter({
         { path: '/transactions', name: 'transactions', component: () => import('../views/transactions/Transactions.vue'), meta: { requiresAuth: true } },
         { path: '/ledger', name: 'ledger', component: () => import('../views/ledger/Ledger.vue'), meta: { requiresAuth: true } },
         { path: '/compliance', name: 'compliance', component: () => import('../views/compliance/Compliance.vue'), meta: { requiresAuth: true } },
+        { path: '/compliance/tax', name: 'tax dashboard', component: () => import('../views/compliance/TaxDashboard.vue'), meta: { requiresAuth: true } },
+
 
         // Placeholder Pages for pending modules
         { path: '/wallets', name: 'wallets', component: () => import('../views/wallets/Wallets.vue'), meta: { requiresAuth: true } },
@@ -28,8 +30,16 @@ const router = createRouter({
         { path: '/reconciliation', name: 'reconciliation', component: () => import('../views/ledger/Reconciliation.vue'), meta: { requiresAuth: true } },
         { path: '/alerts', name: 'risk alerts', component: () => import('../views/compliance/RiskAlerts.vue'), meta: { requiresAuth: true } },
         { path: '/notifications', name: 'notifications', component: () => import('../views/system/Notifications.vue'), meta: { requiresAuth: true } },
+        { path: '/notifications/:id', name: 'notification detail', component: () => import('../views/system/NotificationDetail.vue'), meta: { requiresAuth: true } },
         { path: '/profile', name: 'admin profile', component: () => import('../views/system/Profile.vue'), meta: { requiresAuth: true } },
         { path: '/system/settings', name: 'system settings', component: () => import('../views/system/SystemSettings.vue'), meta: { requiresAuth: true } },
+
+        // Savings Module
+        { path: '/savings', name: 'savings dashboard', component: () => import('../views/savings/SavingsDashboard.vue'), meta: { requiresAuth: true } },
+        { path: '/savings/products', name: 'savings products', component: () => import('../views/savings/SavingsProducts.vue'), meta: { requiresAuth: true } },
+        { path: '/savings/vaults', name: 'savings vaults', component: () => import('../views/savings/SavingsVaults.vue'), meta: { requiresAuth: true } },
+        { path: '/savings/transactions', name: 'savings transactions', component: () => import('../views/savings/SavingsTransactions.vue'), meta: { requiresAuth: true } },
+        { path: '/savings/yield-ledger', name: 'yield ledger', component: () => import('../views/savings/YieldLedger.vue'), meta: { requiresAuth: true } },
     ]
 })
 

@@ -14,7 +14,11 @@ import {
   ListBulletIcon,
   BellAlertIcon,
   Cog6ToothIcon, 
-  TagIcon
+  TagIcon,
+  CircleStackIcon,
+  ChartPieIcon,
+  ArrowsPointingInIcon,
+  BanknotesIcon as CashIcon
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps<{
@@ -37,6 +41,16 @@ const navigation = [
       { name: 'Treasury', href: '/treasury', icon: PresentationChartLineIcon },
       { name: 'Ledger', href: '/ledger', icon: DocumentChartBarIcon },
       { name: 'Reconciliation', href: '/reconciliation', icon: ArrowsRightLeftIcon },
+    ]
+  },
+  {
+    name: 'Savings Hub',
+    items: [
+      { name: 'Analytics', href: '/savings', icon: ChartPieIcon },
+      { name: 'Products', href: '/savings/products', icon: TagIcon },
+      { name: 'User Vaults', href: '/savings/vaults', icon: CircleStackIcon },
+      { name: 'Trans Log', href: '/savings/transactions', icon: ListBulletIcon },
+      { name: 'Yield Ledger', href: '/savings/yield-ledger', icon: ArrowsPointingInIcon },
     ]
   },
   {

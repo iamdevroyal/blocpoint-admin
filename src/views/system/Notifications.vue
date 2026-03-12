@@ -1,77 +1,30 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { 
-  CheckCircle2,
+  CheckCircle2, 
+  CheckCheck, 
+  Search, 
+  ShieldAlert, 
+  AlertTriangle, 
+  Info, 
+  Trash2, 
+  ChevronRight, 
+  Bell 
 } from 'lucide-vue-next'
 import Card from '../../components/misc/Card.vue'
 import BaseButton from '../../components/forms/BaseButton.vue'
-import BaseDrawer from '../../components/modals/BaseDrawer.vue'
+
+import { useNotificationStore } from '../../stores/notifications'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const notificationStore = useNotificationStore()
 
 const search = ref('')
 const filterType = ref('all')
-const selectedNotification = ref<any>(null)
-const showDetail = ref(false)
-
-const notifications = ref([
-  { 
-    id: 1, 
-    type: 'critical', 
-    title: 'AML Alert: High Volume Transfer', 
-    message: 'Wallet UUID 550e...-440000 detected a transfer of ₦15,000,000.00 exceeding risk threshold.',
-    time: '2 mins ago', 
-    date: '2024-02-22 10:45',
-    read: false,
-    source: 'Risk Engine',
-    metadata: {
-      wallet_id: '550e8400-e29b-41d4-a716-446655440000',
-      amount: 15000000,
-      rule_triggered: 'HIGH_VOLUME_P2P'
-    }
-  },
-  { 
-    id: 2, 
-    type: 'info', 
-    title: 'New Agent Tier 3 Registration', 
-    message: 'Sarah Ahmed has applied for Tier 3 agent status. Documentation is ready for review.',
-    time: '15 mins ago', 
-    date: '2024-02-22 10:32',
-    read: false,
-    source: 'Onboarding'
-  },
-  { 
-    id: 3, 
-    type: 'success', 
-    title: 'Inter-vault Settlement Completed', 
-    message: 'Weekly settlement between Operational Vault and Settlement Reserve was successful.',
-    time: '1h ago', 
-    date: '2024-02-22 09:15',
-    read: true,
-    source: 'Treasury'
-  },
-  { 
-    id: 4, 
-    type: 'warning', 
-    title: 'Low Liquidity Notice: NGN/USDT', 
-    message: 'Stablecoin liquidity provider pool (YellowCard) is approaching its lower bound margin.',
-    time: '3h ago', 
-    date: '2024-02-22 07:45',
-    read: true,
-    source: 'Liquidity'
-  },
-  { 
-    id: 5, 
-    type: 'info', 
-    title: 'System Patch Deployed: v2.4.1', 
-    message: 'Global pricing engine routes updated. Latency optimized across all network nodes.',
-    time: '5h ago', 
-    date: '2024-02-22 05:12',
-    read: true,
-    source: 'Core DevOps'
-  }
-])
 
 const filteredNotifications = computed(() => {
-  return notifications.value.filter(n => {
+  return notificationStore.notifications.filter(n => {
     const q = search.value.toLowerCase()
     const matchesSearch = n.title.toLowerCase().includes(q) || n.message.toLowerCase().includes(q)
     const matchesFilter = filterType.value === 'all' || n.type === filterType.value
@@ -80,17 +33,15 @@ const filteredNotifications = computed(() => {
 })
 
 function markAllRead() {
-  notifications.value.forEach(n => n.read = true)
+  notificationStore.markAllRead()
 }
 
 function openDetail(n: any) {
-  selectedNotification.value = n
-  n.read = true
-  showDetail.value = true
+  router.push(`/notifications/${n.id}`)
 }
 
 function deleteNotification(id: number) {
-  notifications.value = notifications.value.filter(n => n.id !== id)
+  notificationStore.deleteNotification(id)
 }
 </script>
 
@@ -194,61 +145,6 @@ function deleteNotification(id: number) {
       </div>
     </div>
 
-    <!-- Detail Drawer -->
-    <BaseDrawer 
-      :show="showDetail" 
-      :title="selectedNotification?.title" 
-      description="Detailed technical summary and contextual metadata for the selected event."
-      @close="showDetail = false"
-    >
-      <div v-if="selectedNotification" class="space-y-8">
-        <div class="p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/10">
-          <div class="flex items-center gap-4 mb-4">
-             <div :class="[
-                'w-10 h-10 rounded-xl flex items-center justify-center border',
-                selectedNotification.type === 'critical' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500'
-             ]">
-                <ShieldAlert v-if="selectedNotification.type === 'critical'" class="w-5 h-5" />
-                <Bell v-else class="w-5 h-5" />
-             </div>
-             <div>
-                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Event Source</p>
-                <p class="text-sm font-bold text-white">{{ selectedNotification.source }}</p>
-             </div>
-          </div>
-          <p class="text-sm text-slate-300 leading-relaxed">{{ selectedNotification.message }}</p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-           <Card padding="p-4" class="text-center">
-              <p class="text-[9px] text-slate-500 uppercase font-bold tracking-tighter mb-1">Incident Time</p>
-              <p class="text-xs font-mono text-white">{{ selectedNotification.date }}</p>
-           </Card>
-           <Card padding="p-4" class="text-center">
-              <p class="text-[9px] text-slate-500 uppercase font-bold tracking-tighter mb-1">Status</p>
-              <p class="text-xs font-bold text-white uppercase">{{ selectedNotification.read ? 'Archived' : 'Active' }}</p>
-           </Card>
-        </div>
-
-        <div v-if="selectedNotification.metadata" class="space-y-4">
-           <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Contextual Metadata</h4>
-           <div class="space-y-3">
-              <div v-for="(val, key) in selectedNotification.metadata" :key="key" class="p-4 bg-white/[0.03] border border-white/5 rounded-2xl flex justify-between items-center">
-                 <span class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">{{ (key as string).replace('_', ' ') }}</span>
-                 <span class="font-mono text-xs text-white">{{ val }}</span>
-              </div>
-           </div>
-        </div>
-
-        <div class="pt-8 border-t border-white/10 space-y-4">
-           <BaseButton variant="primary" class="w-full py-4 text-sm">
-             Investigate Deep Link <ArrowRight class="w-4 h-4 ml-2" />
-           </BaseButton>
-           <BaseButton variant="ghost" class="w-full text-rose-500" @click="deleteNotification(selectedNotification.id); showDetail = false">
-             Delete Permanent Record
-           </BaseButton>
-        </div>
-      </div>
-    </BaseDrawer>
+    <!-- Detail Drawer removed in favor of dedicated detail page -->
   </div>
 </template>
