@@ -115,7 +115,7 @@ export const useSavingsStore = defineStore('savings', () => {
         loading.value = true
         error.value = null
         try {
-            const { data } = await savingsApi.getYieldLedger(params)
+            const { data } = await savingsApi.getYieldLedgerLogs(params)
             yieldLedger.value = data
         } catch (e: any) {
             error.value = e.response?.data?.message ?? 'Failed to load yield ledger'

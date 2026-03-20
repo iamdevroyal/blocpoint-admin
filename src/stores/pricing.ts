@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import pricingApi from '../api/pricing'
+import { configApi as pricingApi } from '../api/pricing'
 
 export interface SystemConfig {
     id: string

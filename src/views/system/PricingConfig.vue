@@ -2,7 +2,6 @@
 import { ref, computed, onMounted } from 'vue'
 import {
   Settings2,
-  Percent,
   Coins,
   Save,
   RefreshCcw,
@@ -11,7 +10,6 @@ import {
   TrendingUp,
   ShieldCheck,
   Edit2,
-  X,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -102,7 +100,8 @@ function getLabelFromKey(key: string): string {
 }
 
 function getGroupFromKey(key: string): string {
-  return key.split('.')[0].toUpperCase()
+  const first = key.split('.')[0]
+  return first ? first.toUpperCase() : ''
 }
 
 function getTypeClass(type: string): string {

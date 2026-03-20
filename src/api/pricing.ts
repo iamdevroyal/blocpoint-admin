@@ -6,38 +6,42 @@ import apiClient from './axios'
  */
 export const configApi = {
     /**
-     * Get config variables, filtered optionally by group.
+     * GET /admin/config — fetch all system config keys.
+     * Pass a group prefix to filter: getConfigs('fee') returns fee.* keys.
      */
-    getConfig(group?: string) {
+    getConfigs(group?: string) {
         return apiClient.get('/admin/config', {
-            params: { group }
+            params: group ? { group } : {}
         })
     },
 
     /**
-     * Update an existing config entry.
+     * PUT /admin/config/{key} — update a single config value.
      */
     updateConfig(key: string, value: string | number | boolean) {
         return apiClient.put(`/admin/config/${encodeURIComponent(key)}`, { value: String(value) })
     },
 
     /**
-     * POST /admin/config — create a brand-new config key.
+     * POST /admin/config — create a new config key.
      */
-    createConfig(key: string, value: string | number | boolean, type: string = 'string', group: string = 'general', description: string = '') {
+    createConfig(data: {
+        key: string
+        value: string | number | boolean
+        type?: string
+        description?: string
+        is_encrypted?: boolean
+    }) {
         return apiClient.post('/admin/config', {
-            key,
-            value: String(value),
-            type,
-            group,
-            description
+            ...data,
+            value: String(data.value),
         })
     },
 
     /**
-     * Clear dynamic pricing config cache to force refresh across fleet.
+     * POST /admin/config/flush-cache — bust Redis cache for all pricing keys.
      */
-    flushCache() {
+    flushPricingCache() {
         return apiClient.post('/admin/config/flush-cache')
     },
 }
