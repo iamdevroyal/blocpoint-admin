@@ -9,6 +9,7 @@ const products = computed(() => savingsStore.products)
 const loading = computed(() => savingsStore.loading)
 
 const editingProduct = ref<any>(null)
+const editError      = ref<string | null>(null)
 const editForm = ref({
     interest_rate: 0,
     status: 'active'
@@ -20,6 +21,7 @@ onMounted(() => {
 
 const startEdit = (product: any) => {
     editingProduct.value = product
+    editError.value = null
     editForm.value = {
         interest_rate: product.interest_rate * 100, // Convert to percentage for display
         status: product.status
@@ -28,15 +30,15 @@ const startEdit = (product: any) => {
 
 const saveEdit = async () => {
     if (!editingProduct.value) return
-    
+    editError.value = null
     try {
         await savingsStore.updateProduct(editingProduct.value.code, {
             interest_rate: editForm.value.interest_rate / 100, // Convert back to decimal
             status: editForm.value.status
         })
         editingProduct.value = null
-    } catch (err) {
-        console.error('Update failed', err)
+    } catch (err: any) {
+        editError.value = err.response?.data?.message ?? 'Update failed. Please try again.'
     }
 }
 </script>
@@ -123,6 +125,11 @@ const saveEdit = async () => {
                             {{ loading ? 'Saving...' : 'Apply Changes' }}
                         </button>
                     </div>
+
+                    <!-- Inline error for save failures -->
+                    <p v-if="editError" class="text-[10px] text-rose-500 font-bold text-center uppercase tracking-widest">
+                        ⚠️ {{ editError }}
+                    </p>
                 </div>
             </div>
         </div>

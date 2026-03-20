@@ -18,7 +18,7 @@ import {
   CircleStackIcon,
   ChartPieIcon,
   ArrowsPointingInIcon,
-  BanknotesIcon as CashIcon
+  QueueListIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps<{
@@ -71,6 +71,7 @@ const navigation = [
   {
     name: 'System',
     items: [
+      { name: 'Waitlist', href: '/waitlist', icon: QueueListIcon },
       { name: 'Pricing Engine', href: '/system/pricing', icon: TagIcon },
       { name: 'Settings', href: '/system/settings', icon: Cog6ToothIcon },
     ]

@@ -1,387 +1,698 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { 
-  Settings2, 
-  Percent, 
-  Coins, 
-  ArrowUpRight, 
-  Save, 
-  RefreshCcw, 
+import { ref, computed, onMounted } from 'vue'
+import {
+  Settings2,
+  Percent,
+  Coins,
+  Save,
+  RefreshCcw,
   Search,
   Plus,
-  HelpCircle,
-  Zap,
-  Tag,
-  ChevronRight,
   TrendingUp,
   ShieldCheck,
-  ZapOff,
   Edit2,
-  Trash2,
-  Info,
-  AlertTriangle
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Lock,
+  Zap,
+  Tag,
 } from 'lucide-vue-next'
 
 import BaseButton from '../../components/forms/BaseButton.vue'
 import Card from '../../components/misc/Card.vue'
-import StatusBadge from '../../components/badges/StatusBadge.vue'
 import BaseModal from '../../components/modals/BaseModal.vue'
-import BaseDrawer from '../../components/modals/BaseDrawer.vue'
 
+import { usePricingStore, type SystemConfig } from '../../stores/pricing'
+
+const pricingStore = usePricingStore()
+
+// ─── State ──────────────────────────────────────────────────────────────────
 const activeTab = ref('fees')
-const search = ref('')
-const showRuleModal = ref(false)
-const showCommissionDrawer = ref(false)
-const selectedRule = ref<any>(null)
-const selectedComm = ref<any>(null)
+const search   = ref('')
 
-const isPublishing = ref(false)
-const isResetting = ref(false)
+const showEditModal   = ref(false)
+const showCreateModal = ref(false)
+const editingConfig   = ref<SystemConfig | null>(null)
+const editValue       = ref('')
 
-const notification = ref<{ show: boolean, message: string, type: 'success' | 'error' | 'info' }>({
+const newKey         = ref('')
+const newValue       = ref('')
+const newType        = ref('float')
+const newDescription = ref('')
+const createTarget   = ref('fee') // default prefix for new custom key
+
+const notification = ref<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
   show: false,
   message: '',
-  type: 'info'
+  type: 'info',
 })
 
-function showNotification(message: string, type: 'success' | 'error' | 'info' = 'success') {
+// ─── Tab definitions ────────────────────────────────────────────────────────
+const tabs = [
+  { id: 'fees',        label: 'Transaction Fees',    icon: Tag },
+  { id: 'rates',       label: 'Interest Rates',      icon: TrendingUp },
+  { id: 'commissions', label: 'Agent Commissions',   icon: Coins },
+  { id: 'tax',         label: 'Tax & Compliance',    icon: ShieldCheck },
+  { id: 'limits',      label: 'Product Limits',      icon: Lock },
+]
+
+// ─── Computed: filtered configs for each tab ─────────────────────────────────
+const feeConfigs = computed(() =>
+  pricingStore.feeConfigs.filter(c =>
+    !search.value || c.key.includes(search.value.toLowerCase()) || (c.description ?? '').toLowerCase().includes(search.value.toLowerCase())
+  )
+)
+const rateConfigs = computed(() => pricingStore.rateConfigs)
+const commissionConfigs = computed(() => pricingStore.commissionConfigs)
+const taxConfigs = computed(() => pricingStore.taxConfigs)
+const limitConfigs = computed(() => [
+  ...pricingStore.lendingConfigs,
+  ...pricingStore.stablecoinConfigs,
+  ...pricingStore.virtualCardConfigs,
+])
+
+// ─── Notification helper ──────────────────────────────────────────────────────
+function notify(message: string, type: 'success' | 'error' | 'info' = 'success') {
   notification.value = { show: true, message, type }
-  setTimeout(() => {
-    notification.value.show = false
-  }, 3000)
+  setTimeout(() => { notification.value.show = false }, 4000)
 }
 
-const feeRules = ref([
-  { id: 'FR-001', type: 'P2P Transfer', fee_type: 'Percentage', value: '1.5%', min: '₦ 50', max: '₦ 2,500', status: 'active', desc: 'Standard peer-to-peer wallet transfer fee.' },
-  { id: 'FR-002', type: 'Cash Out', fee_type: 'Flat', value: '₦ 100', min: '-', max: '-', status: 'active', desc: 'Withdrawal fee for agent-assisted cash out.' },
-  { id: 'FR-003', type: 'Stablecoin Swap', fee_type: 'Percentage', value: '0.8%', min: '-', max: '-', status: 'active', desc: 'Internal FX swap margin for USDT/NGN.' },
-  { id: 'FR-004', type: 'Merchant Pay', fee_type: 'Percentage', value: '2.0%', min: '₦ 10', max: '₦ 10,000', status: 'inactive', desc: 'B2B merchant settlement fee profile.' }
-])
+// ─── Format display value ─────────────────────────────────────────────────────
+function formatValue(config: SystemConfig): string {
+  if (config.is_encrypted) return '••••••••'
+  const v = config.value
+  if (config.type === 'float') {
+    const n = parseFloat(v)
+    // If it looks like a rate (< 2) format as percentage, otherwise as plain number
+    if (n > 0 && n < 2 && config.key.includes('rate') || config.key.includes('fee.') && n < 1) {
+      return `${(n * 100).toFixed(2)}%`
+    }
+    return `${Number(v).toLocaleString()}`
+  }
+  return String(v)
+}
 
-const commissions = ref([
-  { id: 'C-001', role: 'Tier 1 Agent', type: 'Deposit', payout: '₦ 50 / TXN', method: 'Instant', volume: '0 - 500k', count: '128' },
-  { id: 'C-002', role: 'Tier 2 Agent', type: 'Withdrawal', payout: '0.2%', method: 'Instant', volume: '500k - 5M', count: '42' },
-  { id: 'C-003', role: 'Super Agent', type: 'Network Fee Share', payout: '15% of Revenue', method: 'Monthly', volume: '5M+', count: '12' }
-])
+function getLabelFromKey(key: string): string {
+  // Convert dot.notation.key → Title Case Label
+  const parts = key.split('.')
+  const last = (parts[parts.length - 1] ?? '').replace(/_/g, ' ')
+  return last.replace(/\b\w/g, c => c.toUpperCase())
+}
 
-const filteredFees = computed(() => {
-  return feeRules.value.filter(rule => {
-    const q = search.value.toLowerCase()
-    return rule.type.toLowerCase().includes(q) || rule.id.toLowerCase().includes(q)
+function getGroupFromKey(key: string): string {
+  return key.split('.')[0].toUpperCase()
+}
+
+function getTypeClass(type: string): string {
+  const map: Record<string, string> = {
+    float: 'badge-blue',
+    integer: 'badge-purple',
+    boolean: 'badge-green',
+    json: 'badge-orange',
+    string: 'badge-gray',
+  }
+  return map[type] ?? 'badge-gray'
+}
+
+// ─── Edit actions ─────────────────────────────────────────────────────────────
+function openEdit(config: SystemConfig) {
+  editingConfig.value = config
+  editValue.value = String(config.value)
+  showEditModal.value = true
+}
+
+async function saveEdit() {
+  if (!editingConfig.value) return
+  const ok = await pricingStore.updateConfig(editingConfig.value.key, editValue.value)
+  if (ok) {
+    notify(`✓ ${editingConfig.value.key} updated successfully`)
+    showEditModal.value = false
+    editingConfig.value = null
+  } else {
+    notify(pricingStore.error ?? 'Update failed.', 'error')
+  }
+}
+
+// ─── Create actions ───────────────────────────────────────────────────────────
+function openCreate() {
+  newKey.value = createTarget.value + '.'
+  newValue.value = ''
+  newType.value = 'float'
+  newDescription.value = ''
+  showCreateModal.value = true
+}
+
+async function saveCreate() {
+  const ok = await pricingStore.createConfig({
+    key: newKey.value.trim(),
+    value: newValue.value,
+    type: newType.value,
+    description: newDescription.value || undefined,
   })
+  if (ok) {
+    notify(`✓ Config key "${newKey.value}" created`)
+    showCreateModal.value = false
+  } else {
+    notify(pricingStore.error ?? 'Create failed.', 'error')
+  }
+}
+
+// ─── Publish Changes ──────────────────────────────────────────────────────────
+async function publishChanges() {
+  const ok = await pricingStore.flushCache()
+  if (ok) {
+    notify('✓ Changes published — pricing cache cleared. All services will reload fresh values.', 'success')
+  } else {
+    notify(pricingStore.error ?? 'Publish failed.', 'error')
+  }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+onMounted(() => {
+  pricingStore.fetchAll()
 })
-
-const handlePublish = () => {
-  isPublishing.value = true
-  showNotification('Syncing pricing changes to network nodes...', 'info')
-  setTimeout(() => {
-    isPublishing.value = false
-    showNotification('Pricing engine updated successfully (V2.4.1)', 'success')
-  }, 2500)
-}
-
-const handleReset = () => {
-  isResetting.value = true
-  setTimeout(() => {
-    isResetting.value = false
-    showNotification('Pricing defaults restored.', 'info')
-  }, 1500)
-}
-
-function openRuleModal(rule: any = null) {
-  selectedRule.value = rule || { id: 'FR-NEW', type: '', fee_type: 'Percentage', value: '', min: '', max: '', status: 'active' }
-  showRuleModal.value = true
-}
-
-function openCommDrawer(comm: any) {
-  selectedComm.value = comm
-  showCommissionDrawer.value = true
-}
 </script>
 
 <template>
-  <div class="p-4 sm:p-8 max-w-[1200px] mx-auto space-y-8">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-          <Settings2 class="w-8 h-8 text-indigo-500" />
-          Pricing & Commission Engine
-        </h1>
-        <p class="text-slate-400 mt-1">Configure transaction fees, agent payouts, and FX margins across the network.</p>
+  <div class="pricing-page">
+
+    <!-- ── Notification Toast ── -->
+    <Transition name="toast">
+      <div v-if="notification.show" :class="['toast', `toast-${notification.type}`]">
+        <component :is="notification.type === 'success' ? CheckCircle2 : AlertCircle" :size="16" />
+        <span>{{ notification.message }}</span>
       </div>
-      <div class="flex gap-3">
-        <BaseButton variant="secondary" size="sm" @click="handleReset" :loading="isResetting">
-          <RefreshCcw class="w-4 h-4 mr-2" />
-          Reset Defaults
+    </Transition>
+
+    <!-- ── Page Header ── -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-icon">
+          <Settings2 :size="22" />
+        </div>
+        <div>
+          <h1 class="page-title">Pricing Engine</h1>
+          <p class="page-subtitle">Manage fees, interest rates, commissions, and product limits</p>
+        </div>
+      </div>
+      <div class="page-header-actions">
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          @click="pricingStore.fetchAll()"
+          :disabled="pricingStore.loading"
+        >
+          <Loader2 v-if="pricingStore.loading" :size="14" class="spin" />
+          <RefreshCcw v-else :size="14" />
+          Refresh
         </BaseButton>
-        <BaseButton variant="primary" size="sm" @click="handlePublish" :loading="isPublishing">
-          <Save class="w-4 h-4 mr-2" />
-          Publish Changes
+        <BaseButton
+          variant="primary"
+          size="sm"
+          @click="publishChanges"
+          :disabled="pricingStore.publishing"
+        >
+          <Loader2 v-if="pricingStore.publishing" :size="14" class="spin" />
+          <Save v-else :size="14" />
+          {{ pricingStore.publishing ? 'Publishing…' : 'Publish Changes' }}
         </BaseButton>
       </div>
     </div>
 
-    <!-- Navigation Tabs -->
-    <div class="flex items-center gap-1 bg-white/5 p-1 rounded-2xl w-fit max-w-full overflow-x-auto scrollbar-hide">
-      <button 
-        v-for="t in [
-          { id: 'fees', label: 'Transaction Fees', icon: Tag },
-          { id: 'commissions', label: 'Agent Commissions', icon: Percent },
-          { id: 'fx', label: 'FX Margins', icon: Coins }
-        ]" :key="t.id"
-        @click="activeTab = t.id"
-        :class="[
-          'flex items-center gap-2 px-6 py-2.5 text-xs font-bold rounded-xl transition-all',
-          activeTab === t.id ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-300'
-        ]"
+    <!-- ── Error Banner ── -->
+    <div v-if="pricingStore.error && !pricingStore.loading" class="error-banner">
+      <AlertCircle :size="16" />
+      <span>{{ pricingStore.error }}</span>
+    </div>
+
+    <!-- ── Tabs ── -->
+    <div class="tab-bar">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        :class="['tab-btn', { active: activeTab === tab.id }]"
+        @click="activeTab = tab.id"
       >
-        <component :is="t.icon" class="w-4 h-4" />
-        {{ t.label }}
+        <component :is="tab.icon" :size="14" />
+        {{ tab.label }}
       </button>
     </div>
 
-    <!-- Content Area -->
-    <div v-if="activeTab === 'fees'" class="space-y-6">
-      <div class="flex justify-between items-center">
-        <div class="relative w-full max-w-md">
-           <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-           <input v-model="search" type="text" placeholder="Search rules..." class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50" />
+    <!-- ── Loading skeleton ── -->
+    <div v-if="pricingStore.loading" class="skeleton-grid">
+      <div v-for="i in 6" :key="i" class="skeleton-card" />
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB: Transaction Fees -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <template v-if="!pricingStore.loading && activeTab === 'fees'">
+      <div class="section-toolbar">
+        <div class="search-box">
+          <Search :size="14" />
+          <input v-model="search" placeholder="Search fee keys…" />
         </div>
-        <BaseButton variant="primary" size="sm" @click="openRuleModal()">
-          <Plus class="w-4 h-4 mr-2" />
-          New Pricing Rule
+        <BaseButton variant="primary" size="sm" @click="() => { createTarget = 'fee'; openCreate() }">
+          <Plus :size="14" /> New Fee Rule
         </BaseButton>
       </div>
 
-      <Card padding="p-0" class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead class="bg-white/[0.01] border-b border-white/5">
-            <tr class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              <th class="px-6 py-4">Rule ID</th>
-              <th class="px-6 py-4">Service Type</th>
-              <th class="px-6 py-4">Fee Structure</th>
-              <th class="px-6 py-4">Value</th>
-              <th class="px-6 py-4">Bounds (Min/Max)</th>
-              <th class="px-6 py-4">Status</th>
-              <th class="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-white/5 text-slate-300">
-            <tr v-for="rule in filteredFees" :key="rule.id" class="hover:bg-white/[0.01] transition-colors group">
-              <td class="px-6 py-4 font-mono text-xs font-bold text-indigo-400">{{ rule.id }}</td>
-              <td class="px-6 py-4 text-xs font-bold text-white">{{ rule.type }}</td>
-              <td class="px-6 py-4">
-                <span class="text-xs text-slate-400">{{ rule.fee_type }}</span>
-              </td>
-              <td class="px-6 py-4">
-                <span class="font-bold text-white">{{ rule.value }}</span>
-              </td>
-              <td class="px-6 py-4 font-mono text-[10px] text-slate-500">
-                {{ rule.min }} / {{ rule.max }}
-              </td>
-              <td class="px-6 py-4">
-                <StatusBadge :status="rule.status as any" size="sm" class="uppercase text-[9px]" />
-              </td>
-              <td class="px-6 py-4 text-right">
-                <BaseButton variant="ghost" size="sm" class="text-slate-500 hover:text-white" @click="openRuleModal(rule)">
-                  Edit
-                </BaseButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <Card>
+        <div class="config-table-header">
+          <span>Config Key</span>
+          <span>Description</span>
+          <span>Type</span>
+          <span>Value</span>
+          <span>Last Updated</span>
+          <span></span>
+        </div>
+        <div v-if="feeConfigs.length === 0" class="empty-state">
+          <Tag :size="32" />
+          <p>No fee rules found. Run the PricingConfigSeeder or create a custom rule.</p>
+        </div>
+        <div v-for="config in feeConfigs" :key="config.id" class="config-row">
+          <div class="config-key">
+            <code>{{ config.key }}</code>
+            <span :class="['type-badge', getTypeClass(config.type)]">{{ config.type }}</span>
+          </div>
+          <div class="config-desc">{{ config.description ?? '—' }}</div>
+          <div class="config-group">
+            <span class="group-chip">{{ getGroupFromKey(config.key) }}</span>
+          </div>
+          <div class="config-value">
+            <strong>{{ formatValue(config) }}</strong>
+          </div>
+          <div class="config-date">
+            {{ config.updated_at ? new Date(config.updated_at).toLocaleDateString() : '—' }}
+          </div>
+          <div class="config-actions">
+            <button class="icon-btn" @click="openEdit(config)" title="Edit">
+              <Edit2 :size="14" />
+            </button>
+          </div>
+        </div>
       </Card>
-    </div>
+    </template>
 
-    <!-- Commission View -->
-    <div v-else-if="activeTab === 'commissions'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-       <Card v-for="comm in commissions" :key="comm.role + comm.type" class="group hover:border-indigo-500/30 transition-all cursor-pointer" @click="openCommDrawer(comm)">
-          <div class="flex justify-between items-start mb-6">
-            <div class="p-2.5 bg-indigo-500/5 rounded-xl border border-indigo-500/10 text-indigo-400 group-hover:text-white transition-colors">
-              <Percent class="w-5 h-5" />
-            </div>
-            <div class="text-[9px] font-bold text-slate-500 uppercase px-2 py-0.5 bg-white/5 rounded border border-white/5">{{ comm.method }}</div>
-          </div>
-          <div>
-            <h4 class="text-xs font-bold text-white uppercase tracking-widest">{{ comm.type }} Payout</h4>
-            <p class="text-2xl font-bold text-white mt-1">{{ comm.payout }}</p>
-            <p class="text-[10px] text-slate-500 mt-2">Applies to: <span class="text-white font-semibold">{{ comm.role }}</span></p>
-          </div>
-          <template #footer>
-             <BaseButton variant="ghost" size="sm" class="w-full text-indigo-400 hover:text-white transition-colors">
-               Modify Policy <ArrowUpRight class="w-3 h-3 ml-2" />
-             </BaseButton>
-          </template>
-       </Card>
-       <div 
-        class="border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center p-8 gap-4 opacity-50 hover:opacity-100 transition-opacity cursor-pointer group"
-        @click="showNotification('Opening policy designer...', 'info')"
-      >
-          <Plus class="w-8 h-8 text-slate-500 group-hover:text-indigo-400" />
-          <span class="text-xs font-bold text-slate-500 uppercase tracking-widest group-hover:text-indigo-400">New Payout Tier</span>
-       </div>
-    </div>
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB: Interest Rates -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <template v-if="!pricingStore.loading && activeTab === 'rates'">
+      <div class="section-toolbar">
+        <p class="section-note">
+          <Zap :size="14" /> These rates are read live by savings services. Changes take effect after "Publish Changes".
+        </p>
+        <BaseButton variant="primary" size="sm" @click="() => { createTarget = 'rate'; openCreate() }">
+          <Plus :size="14" /> Add Rate
+        </BaseButton>
+      </div>
 
-    <!-- Modals & Drawers -->
-
-    <!-- Rule Configuration Modal -->
-    <BaseModal 
-      :show="showRuleModal" 
-      @close="showRuleModal = false"
-      title="Pricing Rule Configuration" 
-      description="Define transaction fees and threshold bounds for network services."
-    >
-      <div v-if="selectedRule" class="space-y-6">
-        <div class="grid grid-cols-2 gap-4">
-           <div class="space-y-2">
-              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Service Type</label>
-              <input v-model="selectedRule.type" type="text" class="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white" placeholder="e.g. Wallet Swap" />
-           </div>
-           <div class="space-y-2">
-              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Fee Type</label>
-              <select v-model="selectedRule.fee_type" class="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white">
-                <option>Percentage</option>
-                <option>Flat Fee</option>
-              </select>
-           </div>
-        </div>
-        <div class="space-y-2">
-           <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Fee Value</label>
-           <div class="relative">
-              <input v-model="selectedRule.value" type="text" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white font-bold" />
-              <div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"><Tag class="w-4 h-4" /></div>
-           </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-2">
-             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Min. Bound</label>
-             <input v-model="selectedRule.min" type="text" class="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white" />
-          </div>
-          <div class="space-y-2">
-             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Max. Bound</label>
-             <input v-model="selectedRule.max" type="text" class="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs text-white" />
-          </div>
-        </div>
-        <div class="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex items-start gap-3">
-           <Info class="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-           <p class="text-[10px] text-slate-400 italic">Rules are applied to the gross transaction volume before agent commission splits.</p>
+      <div class="rate-grid">
+        <Card v-for="config in rateConfigs" :key="config.id" class="rate-card">
+          <div class="rate-card-label">{{ getLabelFromKey(config.key) }}</div>
+          <div class="rate-card-subkey"><code>{{ config.key }}</code></div>
+          <div class="rate-card-value">{{ formatValue(config) }}</div>
+          <div class="rate-card-desc">{{ config.description ?? '' }}</div>
+          <button class="rate-edit-btn" @click="openEdit(config)">
+            <Edit2 :size="12" /> Edit
+          </button>
+        </Card>
+        <div v-if="rateConfigs.length === 0" class="empty-state">
+          <TrendingUp :size="32" />
+          <p>No rate configs loaded. Run the PricingConfigSeeder.</p>
         </div>
       </div>
-      <template #footer>
-        <div class="flex gap-3 justify-between w-full">
-           <BaseButton variant="secondary" @click="showNotification('Rule archive requested.', 'error')"><Trash2 class="w-4 h-4 mr-2" /> Delete</BaseButton>
-           <BaseButton variant="primary" class="flex-1" @click="showNotification('Pricing rule parameters saved.', 'success'); showRuleModal = false">Update Rule</BaseButton>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB: Agent Commissions -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <template v-if="!pricingStore.loading && activeTab === 'commissions'">
+      <div class="section-toolbar">
+        <p class="section-note">
+          <Coins :size="14" /> Commission configs control agent payout rates per transaction type.
+        </p>
+        <BaseButton variant="primary" size="sm" @click="() => { createTarget = 'commission'; openCreate() }">
+          <Plus :size="14" /> Add Commission
+        </BaseButton>
+      </div>
+      <Card>
+        <div class="config-table-header">
+          <span>Config Key</span>
+          <span>Description</span>
+          <span>Type</span>
+          <span>Value</span>
+          <span></span>
         </div>
-      </template>
+        <div v-if="commissionConfigs.length === 0" class="empty-state">
+          <Coins :size="32" />
+          <p>No commission configs. Run the PricingConfigSeeder.</p>
+        </div>
+        <div v-for="config in commissionConfigs" :key="config.id" class="config-row">
+          <div class="config-key"><code>{{ config.key }}</code></div>
+          <div class="config-desc">{{ config.description ?? '—' }}</div>
+          <div class="config-group">
+            <span :class="['type-badge', getTypeClass(config.type)]">{{ config.type }}</span>
+          </div>
+          <div class="config-value"><strong>{{ formatValue(config) }}</strong></div>
+          <div class="config-actions">
+            <button class="icon-btn" @click="openEdit(config)"><Edit2 :size="14" /></button>
+          </div>
+        </div>
+      </Card>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB: Tax & Compliance -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <template v-if="!pricingStore.loading && activeTab === 'tax'">
+      <div class="section-toolbar">
+        <p class="section-note">
+          <ShieldCheck :size="14" /> Tax rates reflect Nigerian tax law. Defaults set per CITA / CGT Act. Consult compliance before editing.
+        </p>
+      </div>
+      <Card>
+        <div class="config-table-header">
+          <span>Config Key</span>
+          <span>Description</span>
+          <span>Rate</span>
+          <span>Last Updated</span>
+          <span></span>
+        </div>
+        <div v-if="taxConfigs.length === 0" class="empty-state">
+          <ShieldCheck :size="32" />
+          <p>No tax configs. Run the PricingConfigSeeder.</p>
+        </div>
+        <div v-for="config in taxConfigs" :key="config.id" class="config-row">
+          <div class="config-key"><code>{{ config.key }}</code></div>
+          <div class="config-desc">{{ config.description ?? '—' }}</div>
+          <div class="config-value">
+            <strong>{{ (parseFloat(config.value) * 100).toFixed(1) }}%</strong>
+          </div>
+          <div class="config-date">
+            {{ config.updated_at ? new Date(config.updated_at).toLocaleDateString() : '—' }}
+          </div>
+          <div class="config-actions">
+            <button class="icon-btn" @click="openEdit(config)" title="Edit (consult compliance)">
+              <Edit2 :size="14" />
+            </button>
+          </div>
+        </div>
+      </Card>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- TAB: Product Limits -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <template v-if="!pricingStore.loading && activeTab === 'limits'">
+      <div class="section-toolbar">
+        <p class="section-note">
+          <Lock :size="14" /> Limits control per-product thresholds, stablecoin tier caps, and virtual card settings.
+        </p>
+      </div>
+      <Card>
+        <div class="config-table-header">
+          <span>Config Key</span>
+          <span>Description</span>
+          <span>Type</span>
+          <span>Value</span>
+          <span></span>
+        </div>
+        <div v-if="limitConfigs.length === 0" class="empty-state">
+          <Lock :size="32" />
+          <p>No limit configs. Run the PricingConfigSeeder.</p>
+        </div>
+        <div v-for="config in limitConfigs" :key="config.id" class="config-row">
+          <div class="config-key"><code>{{ config.key }}</code></div>
+          <div class="config-desc">{{ config.description ?? '—' }}</div>
+          <div class="config-group">
+            <span :class="['type-badge', getTypeClass(config.type)]">{{ config.type }}</span>
+          </div>
+          <div class="config-value"><strong>{{ Number(config.value).toLocaleString() }}</strong></div>
+          <div class="config-actions">
+            <button class="icon-btn" @click="openEdit(config)"><Edit2 :size="14" /></button>
+          </div>
+        </div>
+      </Card>
+    </template>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- EDIT MODAL -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <BaseModal :show="showEditModal" @close="showEditModal = false" title="Edit Config Value" size="md">
+      <div v-if="editingConfig" class="modal-form">
+        <div class="modal-config-key">
+          <span class="label">Config Key</span>
+          <code>{{ editingConfig.key }}</code>
+        </div>
+        <div class="modal-config-key">
+          <span class="label">Description</span>
+          <p class="desc-text">{{ editingConfig.description ?? 'No description.' }}</p>
+        </div>
+        <div class="modal-config-key">
+          <span class="label">Type</span>
+          <span :class="['type-badge', getTypeClass(editingConfig.type)]">{{ editingConfig.type }}</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Value</label>
+          <input
+            v-model="editValue"
+            :type="editingConfig.type === 'integer' || editingConfig.type === 'float' ? 'number' : 'text'"
+            :step="editingConfig.type === 'float' ? '0.001' : '1'"
+            class="form-input"
+            placeholder="Enter new value…"
+          />
+          <p v-if="editingConfig.type === 'float' && parseFloat(editValue) < 1" class="form-hint">
+            Decimal fraction: {{ (parseFloat(editValue || '0') * 100).toFixed(2) }}%
+          </p>
+        </div>
+        <div class="modal-actions">
+          <BaseButton variant="secondary" @click="showEditModal = false">Cancel</BaseButton>
+          <BaseButton variant="primary" @click="saveEdit" :disabled="pricingStore.saving">
+            <Loader2 v-if="pricingStore.saving" :size="14" class="spin" />
+            <Save v-else :size="14" />
+            {{ pricingStore.saving ? 'Saving…' : 'Save Change' }}
+          </BaseButton>
+        </div>
+      </div>
     </BaseModal>
 
-    <!-- Commission Policy Drawer -->
-    <BaseDrawer 
-      :show="showCommissionDrawer" 
-      :title="`Policy Designer: ${selectedComm?.role}`" 
-      description="Agent incentive structure and volume-based payout scaling."
-      @close="showCommissionDrawer = false"
-    >
-      <div v-if="selectedComm" class="space-y-8">
-         <div class="p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/10 space-y-4">
-            <div class="flex justify-between items-center">
-               <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                     <Percent class="w-6 h-6" />
-                  </div>
-                  <div>
-                     <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Active Policy</h4>
-                     <p class="text-sm font-bold text-white">{{ selectedComm.role }} - {{ selectedComm.type }}</p>
-                  </div>
-               </div>
-               <div class="text-[10px] font-bold text-white bg-white/10 px-3 py-1 rounded-lg border border-white/10 uppercase font-mono">{{ selectedComm.method }}</div>
-            </div>
-         </div>
-
-         <div class="grid grid-cols-2 gap-4">
-            <Card padding="p-4">
-               <div class="text-[9px] font-bold text-slate-500 uppercase mb-1">Current Payout</div>
-               <div class="text-xl font-bold text-white font-mono leading-none tracking-tight">{{ selectedComm.payout }}</div>
-            </Card>
-            <Card padding="p-4">
-               <div class="text-[9px] font-bold text-slate-500 uppercase mb-1">Volume Tier</div>
-               <div class="text-xl font-bold text-white font-mono leading-none tracking-tight uppercase">{{ selectedComm.volume }}</div>
-            </Card>
-         </div>
-
-         <div class="space-y-4">
-            <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Policy Performance</h4>
-            <div class="p-5 bg-white/[0.02] border border-white/10 rounded-2xl flex items-center justify-between">
-               <div class="flex items-center gap-4">
-                  <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                     <TrendingUp class="w-5 h-5" />
-                  </div>
-                  <div>
-                     <div class="text-xs font-bold text-white">{{ selectedComm.count }} Agents</div>
-                     <div class="text-[10px] text-slate-500">Currently enrolled in this tier</div>
-                  </div>
-               </div>
-               <BaseButton variant="ghost" size="sm" class="text-indigo-400">
-                  Manage <ArrowUpRight class="w-3 h-3 ml-2" />
-               </BaseButton>
-            </div>
-         </div>
-
-         <div class="space-y-4 pt-4 border-t border-white/10">
-            <div class="flex items-center justify-between p-4 bg-rose-500/5 border border-rose-500/10 rounded-2xl hover:bg-rose-500/10 transition-colors cursor-pointer group">
-               <div class="flex items-center gap-3">
-                  <ZapOff class="w-5 h-5 text-rose-500" />
-                  <div>
-                     <div class="text-xs font-bold text-white">Emergency Suspension</div>
-                     <div class="text-[9px] text-slate-600 uppercase font-bold tracking-tighter">Disable policy globally</div>
-                  </div>
-               </div>
-               <ChevronRight class="w-4 h-4 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <BaseButton variant="primary" class="w-full py-4 text-sm" @click="showNotification('Policy revisions queued.', 'success'); showCommissionDrawer = false">
-               <Edit2 class="w-4 h-4 mr-2" /> Edit Policy Structure
-            </BaseButton>
-         </div>
-      </div>
-    </BaseDrawer>
-
-    <!-- Notification -->
-    <transition
-      enter-active-class="transform ease-out duration-300 transition"
-      enter-from-class="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-      enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
-      leave-active-class="transition ease-in duration-100"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <div v-if="notification.show" class="fixed bottom-8 right-8 z-[100] max-w-sm w-full bg-[#1a1f2e] border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-3">
-        <div :class="[
-          'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
-          notification.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 
-          notification.type === 'error' ? 'bg-rose-500/10 text-rose-400' : 'bg-indigo-500/10 text-indigo-400'
-        ]">
-          <component :is="notification.type === 'success' ? ShieldCheck : notification.type === 'error' ? AlertTriangle : Info" class="w-4 h-4" />
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- CREATE MODAL -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <BaseModal :show="showCreateModal" @close="showCreateModal = false" title="New Config Key" size="md">
+      <div class="modal-form">
+        <div class="form-group">
+          <label class="form-label">Config Key <span class="required">*</span></label>
+          <input v-model="newKey" class="form-input" placeholder="e.g. fee.transfer.premium" />
+          <p class="form-hint">Use dot-notation. Must be lowercase alphanumeric + dots.</p>
         </div>
-        <p class="text-sm font-medium text-white">{{ notification.message }}</p>
+        <div class="form-group">
+          <label class="form-label">Type <span class="required">*</span></label>
+          <select v-model="newType" class="form-input">
+            <option value="float">float (decimal number)</option>
+            <option value="integer">integer (whole number)</option>
+            <option value="string">string</option>
+            <option value="boolean">boolean (true/false)</option>
+            <option value="json">json (JSON object)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Value <span class="required">*</span></label>
+          <input
+            v-model="newValue"
+            :type="newType === 'integer' || newType === 'float' ? 'number' : 'text'"
+            class="form-input"
+            placeholder="Initial value"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input v-model="newDescription" class="form-input" placeholder="Human-readable description (optional)" />
+        </div>
+        <div class="modal-actions">
+          <BaseButton variant="secondary" @click="showCreateModal = false">Cancel</BaseButton>
+          <BaseButton variant="primary" @click="saveCreate" :disabled="pricingStore.saving || !newKey || !newValue">
+            <Loader2 v-if="pricingStore.saving" :size="14" class="spin" />
+            <Plus v-else :size="14" />
+            {{ pricingStore.saving ? 'Creating…' : 'Create Key' }}
+          </BaseButton>
+        </div>
       </div>
-    </transition>
+    </BaseModal>
 
-    <!-- Pricing Integrity Alert -->
-    <div class="glass-panel p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/20 flex items-center gap-6">
-       <div class="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white shrink-0">
-         <Zap class="w-6 h-6" />
-       </div>
-       <div class="flex-1">
-         <h4 class="text-sm font-bold text-white">Dynamic Pricing Active</h4>
-         <p class="text-xs text-slate-500 mt-1">Changes published to the Pricing Engine are reflected across all network nodes within 45 seconds.</p>
-       </div>
-       <BaseButton variant="secondary" size="sm" class="shrink-0">
-          <HelpCircle class="w-4 h-4 mr-2" /> Learn More
-       </BaseButton>
-    </div>
   </div>
 </template>
 
 <style scoped>
+/* ── Layout ── */
+.pricing-page { display: flex; flex-direction: column; gap: 20px; padding: 24px; }
+
+/* ── Header ── */
+.page-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.page-header-left { display: flex; align-items: center; gap: 14px; }
+.page-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary, #6366f1), #8b5cf6);
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  flex-shrink: 0;
+}
+.page-title { font-size: 1.35rem; font-weight: 700; margin: 0; color: var(--text-primary, #111); }
+.page-subtitle { font-size: 0.82rem; color: var(--text-muted, #6b7280); margin: 0; }
+.page-header-actions { display: flex; gap: 8px; }
+
+/* ── Error ── */
+.error-banner {
+  display: flex; gap: 8px; align-items: center; padding: 12px 16px;
+  background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px;
+  color: #dc2626; font-size: 0.85rem;
+}
+
+/* ── Tabs ── */
+.tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--border, #e5e7eb); padding-bottom: 0; flex-wrap: wrap; }
+.tab-btn {
+  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+  border: none; background: none; cursor: pointer; font-size: 0.82rem; font-weight: 500;
+  color: var(--text-muted, #6b7280); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all 0.15s; border-radius: 6px 6px 0 0;
+}
+.tab-btn:hover { color: var(--primary, #6366f1); background: rgba(99,102,241,.06); }
+.tab-btn.active { color: var(--primary, #6366f1); border-bottom-color: var(--primary, #6366f1); background: rgba(99,102,241,.06); }
+
+/* ── Skeleton ── */
+.skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.skeleton-card { height: 100px; border-radius: 12px; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── Section toolbar ── */
+.section-toolbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.search-box {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px; background: var(--surface, #fff); width: 240px;
+}
+.search-box input { border: none; outline: none; font-size: 0.82rem; background: transparent; width: 100%; }
+.section-note { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted, #6b7280); margin: 0; }
+
+/* ── Config table ── */
+.config-table-header {
+  display: grid;
+  grid-template-columns: 2fr 2.5fr 80px 120px 100px 44px;
+  gap: 8px; padding: 8px 16px; font-size: 0.72rem; font-weight: 600;
+  color: var(--text-muted, #6b7280); text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+.config-row {
+  display: grid;
+  grid-template-columns: 2fr 2.5fr 80px 120px 100px 44px;
+  gap: 8px; padding: 12px 16px; align-items: center;
+  border-bottom: 1px solid var(--border, #f3f4f6); font-size: 0.82rem;
+  transition: background 0.12s;
+}
+.config-row:last-child { border-bottom: none; }
+.config-row:hover { background: var(--surface-2, #f9fafb); }
+
+.config-key { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.config-key code { font-size: 0.78rem; color: var(--primary, #6366f1); }
+.config-desc { font-size: 0.79rem; color: var(--text-muted, #6b7280); line-height: 1.4; }
+.config-value strong { font-size: 0.88rem; color: var(--text-primary, #111); }
+.config-date { font-size: 0.76rem; color: var(--text-muted, #9ca3af); }
+.config-group { display: contents; }
+.config-actions { display: flex; justify-content: flex-end; }
+
+/* ── Badges ── */
+.type-badge { font-size: 0.65rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; }
+.badge-blue   { background: #eff6ff; color: #2563eb; }
+.badge-purple { background: #f5f3ff; color: #7c3aed; }
+.badge-green  { background: #f0fdf4; color: #16a34a; }
+.badge-orange { background: #fff7ed; color: #ea580c; }
+.badge-gray   { background: #f3f4f6; color: #6b7280; }
+
+.group-chip { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: var(--surface-2, #f3f4f6); color: var(--text-muted, #6b7280); font-weight: 600; }
+
+/* ── Rate grid ── */
+.rate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.rate-card { display: flex; flex-direction: column; gap: 6px; padding: 20px; }
+.rate-card-label { font-weight: 700; font-size: 0.88rem; color: var(--text-primary, #111); }
+.rate-card-subkey code { font-size: 0.72rem; color: var(--text-muted); }
+.rate-card-value { font-size: 1.5rem; font-weight: 800; color: var(--primary, #6366f1); margin: 4px 0; }
+.rate-card-desc { font-size: 0.76rem; color: var(--text-muted, #9ca3af); line-height: 1.5; flex: 1; }
+.rate-edit-btn {
+  display: flex; align-items: center; gap: 4px; margin-top: 8px;
+  padding: 5px 10px; font-size: 0.72rem; font-weight: 600;
+  border: 1px solid var(--border, #e5e7eb); border-radius: 6px;
+  background: none; cursor: pointer; color: var(--text-muted, #6b7280);
+  transition: all 0.12s; width: fit-content;
+}
+.rate-edit-btn:hover { background: var(--primary, #6366f1); color: #fff; border-color: transparent; }
+
+/* ── Icon button ── */
+.icon-btn {
+  width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border, #e5e7eb);
+  background: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted, #6b7280); transition: all 0.12s;
+}
+.icon-btn:hover { background: var(--primary, #6366f1); color: #fff; border-color: transparent; }
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 56px 24px; color: var(--text-muted, #9ca3af); text-align: center;
+}
+.empty-state p { font-size: 0.84rem; max-width: 320px; line-height: 1.6; }
+
+/* ── Modal form ── */
+.modal-form { display: flex; flex-direction: column; gap: 16px; }
+.modal-config-key { display: flex; flex-direction: column; gap: 4px; }
+.modal-config-key .label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted, #9ca3af); }
+.modal-config-key code { font-size: 0.88rem; color: var(--primary, #6366f1); }
+.desc-text { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary, #374151); }
+.form-label .required { color: #ef4444; }
+.form-input {
+  padding: 9px 12px; border: 1px solid var(--border, #e5e7eb); border-radius: 8px;
+  font-size: 0.84rem; background: var(--surface, #fff); color: var(--text-primary, #111);
+  outline: none; transition: border 0.12s;
+}
+.form-input:focus { border-color: var(--primary, #6366f1); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+.form-hint { font-size: 0.74rem; color: var(--text-muted, #9ca3af); margin: 0; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; top: 20px; right: 24px; z-index: 9999;
+  display: flex; align-items: center; gap: 8px; padding: 10px 18px;
+  border-radius: 10px; font-size: 0.84rem; font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0,0,0,.12); min-width: 280px; max-width: 480px;
+}
+.toast-success { background: #f0fdf4; border: 1px solid #86efac; color: #16a34a; }
+.toast-error   { background: #fef2f2; border: 1px solid #fca5a5; color: #dc2626; }
+.toast-info    { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; }
+
+/* ── Animations ── */
+.toast-enter-active,.toast-leave-active { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+.toast-enter-from,.toast-leave-to { opacity: 0; transform: translateY(-10px) scale(0.96); }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .config-table-header,
+  .config-row { grid-template-columns: 2fr 1fr 60px 44px; }
+  .config-desc, .config-date { display: none; }
+  .rate-grid { grid-template-columns: 1fr 1fr; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 480px) {
+  .rate-grid { grid-template-columns: 1fr; }
+  .config-table-header, .config-row { grid-template-columns: 1fr 80px 44px; }
+  .config-group { display: none; }
+}
 </style>

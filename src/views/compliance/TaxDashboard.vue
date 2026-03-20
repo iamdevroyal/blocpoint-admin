@@ -107,7 +107,7 @@ async function loadTotals() {
   loading.value = true
   error.value = null
   try {
-    const { data } = await apiClient.get('/api/v1/admin/compliance/tax-events/totals', {
+    const { data } = await apiClient.get('/admin/compliance/tax-events/totals', {
       params: { date_from: dateFrom.value, date_to: dateTo.value },
     })
     totals.value = data.data ?? data
@@ -121,7 +121,7 @@ async function loadTotals() {
 async function loadEvents(page = 1) {
   eventsLoading.value = true
   try {
-    const { data } = await apiClient.get('/api/v1/admin/compliance/tax-events', {
+    const { data } = await apiClient.get('/admin/compliance/tax-events', {
       params: {
         tax_type: filterType.value || undefined,
         status: filterStatus.value || undefined,
@@ -153,7 +153,7 @@ function openEventDrawer(event: any) {
 async function handleExport() {
   isExporting.value = true
   try {
-    const { data } = await apiClient.get('/api/v1/admin/compliance/tax-events/export', {
+    const { data } = await apiClient.get('/admin/compliance/tax-events/export', {
       params: { date_from: dateFrom.value, date_to: dateTo.value, format: 'csv' },
       responseType: 'blob',
     })

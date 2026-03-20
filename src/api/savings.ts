@@ -5,45 +5,49 @@ import apiClient from './axios'
  * Interacts with /admin/savings/* endpoints.
  */
 export default {
-    /**
-     * Get savings dashboard statistics (AUM, Active Users, Interest Paid, etc.)
-     */
+    /** GET /admin/savings/dashboard — aggregated KPIs */
     getDashboardStats() {
-        return apiClient.get('/api/v1/admin/savings/dashboard')
+        return apiClient.get('/admin/savings/dashboard')
     },
 
-    /**
-     * Get all savings products with their configurations.
-     */
+    /** GET /admin/savings/products — all savings product configs */
     getProducts() {
-        return apiClient.get('/api/v1/admin/savings/products')
+        return apiClient.get('/admin/savings/products')
     },
 
-    /**
-     * Update a specific savings product config (rate, status).
-     */
+    /** PUT /admin/savings/products/{code} — update rate or status */
     updateProduct(code: string, data: any) {
-        return apiClient.put(`/api/v1/admin/savings/products/${code}`, data)
+        return apiClient.put(`/admin/savings/products/${code}`, data)
     },
 
-    /**
-     * Get a paginated list of all savings vaults.
-     */
+    /** GET /admin/savings/vaults — paginated vault list with filters */
     getVaults(params = {}) {
-        return apiClient.get('/api/v1/admin/savings/vaults', { params })
+        return apiClient.get('/admin/savings/vaults', { params })
     },
 
     /**
-     * Get a paginated list of all savings transactions.
+     * POST /admin/savings/vaults/{vaultRef}/freeze
+     * Freezes a vault to block all savings operations (compliance hold).
      */
-    getTransactions(params = {}) {
-        return apiClient.get('/api/v1/admin/savings/transactions', { params })
+    freezeVault(vaultRef: string) {
+        return apiClient.post(`/admin/savings/vaults/${vaultRef}/freeze`)
     },
 
     /**
-     * Get yield ledger records (gross yield vs distributed interest).
+     * POST /admin/savings/vaults/{vaultRef}/unfreeze
+     * Restores a frozen vault back to active status.
      */
-    getYieldLedger(params = {}) {
-        return apiClient.get('/api/v1/admin/savings/yield-ledger', { params })
+    unfreezeVault(vaultRef: string) {
+        return apiClient.post(`/admin/savings/vaults/${vaultRef}/unfreeze`)
+    },
+
+    /** GET /admin/savings/transactions — paginated savings transaction log */
+    getTransactions(params?: Record<string, any>) {
+        return apiClient.get('/admin/savings/transactions', { params })
+    },
+
+    /** GET /admin/savings/yield-ledger — treasury yield allocation records */
+    getYieldLedgerLogs(params?: Record<string, any>) {
+        return apiClient.get('/admin/savings/yield-ledger', { params })
     }
 }

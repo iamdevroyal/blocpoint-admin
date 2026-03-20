@@ -40,6 +40,9 @@ const router = createRouter({
         { path: '/savings/vaults', name: 'savings vaults', component: () => import('../views/savings/SavingsVaults.vue'), meta: { requiresAuth: true } },
         { path: '/savings/transactions', name: 'savings transactions', component: () => import('../views/savings/SavingsTransactions.vue'), meta: { requiresAuth: true } },
         { path: '/savings/yield-ledger', name: 'yield ledger', component: () => import('../views/savings/YieldLedger.vue'), meta: { requiresAuth: true } },
+
+        // Waitlist Management
+        { path: '/waitlist', name: 'waitlist', component: () => import('../views/system/Waitlist.vue'), meta: { requiresAuth: true } },
     ]
 })
 

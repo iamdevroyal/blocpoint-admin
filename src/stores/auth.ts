@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import axios from 'axios'
 import apiClient from '../api/axios'
 
 interface AdminUser {
@@ -22,11 +23,12 @@ export const useAuthStore = defineStore('auth', () => {
     async function login(credentials: Record<string, string>): Promise<{ twoFactorRequired: boolean }> {
         loading.value = true
         try {
-            // Ensure CSRF cookie (for session-based auth) is set
-            await apiClient.get('/sanctum/csrf-cookie')
+            // Ensure CSRF cookie (for session-based auth) is set via the root url
+            const appUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost/blocpoint/blocpoint-api/public/api/v1').replace(/\/api\/v1\/?$/, '')
+            await axios.get(`${appUrl}/sanctum/csrf-cookie`, { withCredentials: true })
 
             // Hit backend admin login endpoint
-            const response = await apiClient.post('/api/v1/admin/auth/login', {
+            const response = await apiClient.post('/admin/auth/login', {
                 email: credentials.email,
                 password: credentials.password,
             })
@@ -65,7 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function logout() {
         try {
-            await apiClient.post('/api/v1/admin/auth/logout')
+            await apiClient.post('/admin/auth/logout')
         } catch (e) {
             // ignore backend errors on logout
         } finally {
@@ -79,7 +81,7 @@ export const useAuthStore = defineStore('auth', () => {
     async function verifyTwoFactor(code: string): Promise<void> {
         loading.value = true
         try {
-            const response = await apiClient.post('/api/v1/admin/auth/2fa/verify', {
+            const response = await apiClient.post('/admin/auth/2fa/verify', {
                 code,
             })
 
