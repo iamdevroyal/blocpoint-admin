@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import axios from 'axios'
 import apiClient from '../api/axios'
 
 interface AdminUser {
@@ -18,16 +17,25 @@ export const useAuthStore = defineStore('auth', () => {
     const pendingTwoFactor = ref(false)
 
     const isAuthenticated = computed(() => !!token.value)
-    const hasPermission = (permission: string) => user.value?.permissions.includes(permission) || user.value?.roles.includes('super_admin')
 
+    /**
+     * Check if the current admin has a given permission or is a super_admin.
+     */
+    const hasPermission = (permission: string) =>
+        user.value?.permissions.includes(permission) ||
+        user.value?.roles.includes('super_admin')
+
+    /**
+     * Login with email and password.
+     *
+     * If 2FA is disabled: backend returns a full-access admin token which is stored.
+     * If 2FA is enabled:  backend returns a short-lived pre-auth token (5 min,
+     * ability:2fa_pending). This is stored temporarily under 'admin_preauth_token'
+     * and used exclusively for the POST /admin/auth/2fa/verify call.
+     */
     async function login(credentials: Record<string, string>): Promise<{ twoFactorRequired: boolean }> {
         loading.value = true
         try {
-            // Ensure CSRF cookie (for session-based auth) is set via the root url
-            const appUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost/blocpoint/blocpoint-api/public/api/v1').replace(/\/api\/v1\/?$/, '')
-            await axios.get(`${appUrl}/sanctum/csrf-cookie`, { withCredentials: true })
-
-            // Hit backend admin login endpoint
             const response = await apiClient.post('/admin/auth/login', {
                 email: credentials.email,
                 password: credentials.password,
@@ -36,25 +44,14 @@ export const useAuthStore = defineStore('auth', () => {
             const data = response.data?.data
 
             if (data?.two_factor_required) {
+                // Store the short-lived pre-auth token for the 2FA verify call
+                localStorage.setItem('admin_preauth_token', data.token)
                 pendingTwoFactor.value = true
-                // Do not set user yet; full auth happens after 2FA verification
                 return { twoFactorRequired: true }
             }
 
-            const admin = data?.admin as { id: string; name: string; email: string; role?: string }
-
-            user.value = {
-                id: admin.id,
-                name: admin.name,
-                email: admin.email,
-                roles: admin.role ? [admin.role] : [],
-                permissions: [],
-            }
-
-            // Session is cookie-based (Laravel guard: admin); we still keep a simple flag token.
-            token.value = 'session'
-            localStorage.setItem('admin_token', token.value)
-
+            // No 2FA — store the full access token and user
+            _setSession(data)
             pendingTwoFactor.value = false
             return { twoFactorRequired: false }
         } catch (e: any) {
@@ -65,41 +62,34 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    async function logout() {
-        try {
-            await apiClient.post('/admin/auth/logout')
-        } catch (e) {
-            // ignore backend errors on logout
-        } finally {
-            token.value = null
-            user.value = null
-            pendingTwoFactor.value = false
-            localStorage.removeItem('admin_token')
-        }
-    }
-
+    /**
+     * Complete two-factor authentication.
+     *
+     * Sends the TOTP code with the pre-auth token (stored in admin_preauth_token).
+     * On success: revokes the pre-auth token (backend), stores the full admin token.
+     */
     async function verifyTwoFactor(code: string): Promise<void> {
         loading.value = true
         try {
-            const response = await apiClient.post('/admin/auth/2fa/verify', {
-                code,
-            })
+            // Temporarily swap in the pre-auth token for this request
+            const preAuthToken = localStorage.getItem('admin_preauth_token')
+            if (!preAuthToken) throw new Error('No pending two-factor session found.')
+
+            // Temporarily set the pre-auth token so the interceptor attaches it
+            localStorage.setItem('admin_token', preAuthToken)
+
+            const response = await apiClient.post('/admin/auth/2fa/verify', { code })
+
+            // Clear the pre-auth token — it was revoked on the backend
+            localStorage.removeItem('admin_preauth_token')
 
             const data = response.data?.data
-            const admin = data?.admin as { id: string; name: string; email: string; role?: string }
-
-            user.value = {
-                id: admin.id,
-                name: admin.name,
-                email: admin.email,
-                roles: admin.role ? [admin.role] : [],
-                permissions: [],
-            }
-
-            token.value = 'session'
-            localStorage.setItem('admin_token', token.value)
+            _setSession(data)
             pendingTwoFactor.value = false
         } catch (e: any) {
+            // Restore state on failure — remove the temporarily set token
+            localStorage.removeItem('admin_token')
+            token.value = null
             console.error('Two-factor verification error', e)
             throw e
         } finally {
@@ -107,20 +97,72 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
+    /**
+     * Revoke the current access token and clear local auth state.
+     */
+    async function logout() {
+        try {
+            await apiClient.post('/admin/auth/logout')
+        } catch {
+            // Ignore backend errors on logout — clear locally regardless
+        } finally {
+            token.value = null
+            user.value = null
+            pendingTwoFactor.value = false
+            localStorage.removeItem('admin_token')
+            localStorage.removeItem('admin_preauth_token')
+            localStorage.removeItem('admin_user')
+        }
+    }
+
+    /**
+     * Fetch and refresh the current admin's profile from the backend.
+     * Replaces the previous mock implementation.
+     */
     async function fetchUser() {
         if (!token.value) return
         try {
-            console.log('Mocking fetchUser for development')
+            const response = await apiClient.get('/admin/auth/me')
+            const data = response.data?.data
             user.value = {
-                id: 'mock-uuid',
-                name: 'Dev Admin',
-                email: 'admin@blocpoint.com',
-                roles: ['super_admin'],
-                permissions: ['all']
+                id:          data.id,
+                name:        data.name,
+                email:       data.email,
+                roles:       data.roles ?? [data.role].filter(Boolean),
+                permissions: data.permissions ?? [],
             }
-        } catch (e) {
-            logout() // invalid token
+            localStorage.setItem('admin_user', JSON.stringify(user.value))
+        } catch {
+            await logout() // Token invalid — force re-login
         }
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Persist the full-access session token and user data.
+     */
+    function _setSession(data: any) {
+        const admin = data?.admin
+        token.value = data?.token
+        localStorage.setItem('admin_token', data?.token ?? '')
+
+        if (admin) {
+            user.value = {
+                id:          admin.id,
+                name:        admin.name,
+                email:       admin.email,
+                roles:       admin.roles ?? (admin.role ? [admin.role] : []),
+                permissions: admin.permissions ?? [],
+            }
+            localStorage.setItem('admin_user', JSON.stringify(user.value))
+        }
+    }
+
+    // Rehydrate user from localStorage on page load (avoids flicker)
+    const cachedUser = localStorage.getItem('admin_user')
+    if (cachedUser) {
+        try { user.value = JSON.parse(cachedUser) } catch { /* ignore */ }
     }
 
     return {
