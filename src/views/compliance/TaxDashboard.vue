@@ -5,7 +5,7 @@ import {
   AlertCircle,
   DollarSign,
   CheckCircle2,
-  Search,
+  // Search,
   Download,
   RefreshCw,
   ChevronRight,
@@ -32,7 +32,7 @@ const totals = ref({
 const taxEvents = ref<any[]>([])
 const taxEventsMeta = ref<any>(null)
 
-const search = ref('')
+// const search = ref('')
 const filterType = ref('')
 const filterStatus = ref('')
 const dateFrom = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
